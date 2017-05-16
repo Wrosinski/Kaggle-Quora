@@ -1,0 +1,364 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import pandas as pd\n",
+    "import itertools as it\n",
+    "import pickle\n",
+    "import glob\n",
+    "import os\n",
+    "import string\n",
+    "import gc\n",
+    "\n",
+    "import nltk\n",
+    "import spacy\n",
+    "import en_core_web_md\n",
+    "import sematch\n",
+    "from tqdm import tqdm\n",
+    "from nltk.corpus import wordnet as wn\n",
+    "\n",
+    "from tqdm import tqdm, tqdm_notebook\n",
+    "from scipy import sparse\n",
+    "from scipy.optimize import minimize\n",
+    "\n",
+    "import re"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "def concat_words(df2):\n",
+    "    df = df2.copy()\n",
+    "    text_feats = df.select_dtypes(include=['object']).columns.values\n",
+    "    for i in text_feats:\n",
+    "        df[i] = df[i].apply(lambda x: (' '.join(i for i in x)))\n",
+    "    return df\n",
+    "\n",
+    "def text_to_wordlist(text):\n",
+    "    text = re.sub(r\"[^A-Za-z0-9]\", \" \", text)\n",
+    "    text = re.sub(r\"what's\", \"\", text)\n",
+    "    text = re.sub(r\"What's\", \"\", text)\n",
+    "    text = re.sub(r\"\\'s\", \" \", text)\n",
+    "    text = re.sub(r\"\\'ve\", \" have \", text)\n",
+    "    text = re.sub(r\"can't\", \"cannot \", text)\n",
+    "    text = re.sub(r\"n't\", \" not \", text)\n",
+    "    text = re.sub(r\"I'm\", \"I am\", text)\n",
+    "    text = re.sub(r\" m \", \" am \", text)\n",
+    "    text = re.sub(r\"\\'re\", \" are \", text)\n",
+    "    text = re.sub(r\"\\'d\", \" would \", text)\n",
+    "    text = re.sub(r\"\\'ll\", \" will \", text)\n",
+    "    text = re.sub(r\"60k\", \" 60000 \", text)\n",
+    "    text = re.sub(r\" e g \", \" eg \", text)\n",
+    "    text = re.sub(r\" b g \", \" bg \", text)\n",
+    "    text = re.sub(r\"\\0s\", \"0\", text)\n",
+    "    text = re.sub(r\" 9 11 \", \"911\", text)\n",
+    "    text = re.sub(r\"e-mail\", \"email\", text)\n",
+    "    text = re.sub(r\"\\s{2,}\", \" \", text)\n",
+    "    text = re.sub(r\"quikly\", \"quickly\", text)\n",
+    "    text = re.sub(r\" usa \", \" America \", text)\n",
+    "    text = re.sub(r\" USA \", \" America \", text)\n",
+    "    text = re.sub(r\" u s \", \" America \", text)\n",
+    "    text = re.sub(r\" uk \", \" England \", text)\n",
+    "    text = re.sub(r\" UK \", \" England \", text)\n",
+    "    text = re.sub(r\"india\", \"India\", text)\n",
+    "    text = re.sub(r\"switzerland\", \"Switzerland\", text)\n",
+    "    text = re.sub(r\"china\", \"China\", text)\n",
+    "    text = re.sub(r\"chinese\", \"Chinese\", text) \n",
+    "    text = re.sub(r\"imrovement\", \"improvement\", text)\n",
+    "    text = re.sub(r\"intially\", \"initially\", text)\n",
+    "    text = re.sub(r\"quora\", \"Quora\", text)\n",
+    "    text = re.sub(r\" dms \", \"direct messages \", text)  \n",
+    "    text = re.sub(r\"demonitization\", \"demonetization\", text) \n",
+    "    text = re.sub(r\"actived\", \"active\", text)\n",
+    "    text = re.sub(r\"kms\", \" kilometers \", text)\n",
+    "    text = re.sub(r\"KMs\", \" kilometers \", text)\n",
+    "    text = re.sub(r\" cs \", \" computer science \", text) \n",
+    "    text = re.sub(r\" upvotes \", \" up votes \", text)\n",
+    "    text = re.sub(r\" iPhone \", \" phone \", text)\n",
+    "    text = re.sub(r\"\\0rs \", \" rs \", text) \n",
+    "    text = re.sub(r\"calender\", \"calendar\", text)\n",
+    "    text = re.sub(r\"ios\", \"operating system\", text)\n",
+    "    text = re.sub(r\"gps\", \"GPS\", text)\n",
+    "    text = re.sub(r\"gst\", \"GST\", text)\n",
+    "    text = re.sub(r\"programing\", \"programming\", text)\n",
+    "    text = re.sub(r\"bestfriend\", \"best friend\", text)\n",
+    "    text = re.sub(r\"dna\", \"DNA\", text)\n",
+    "    text = re.sub(r\"III\", \"3\", text) \n",
+    "    text = re.sub(r\"the US\", \"America\", text)\n",
+    "    text = re.sub(r\"Astrology\", \"astrology\", text)\n",
+    "    text = re.sub(r\"Method\", \"method\", text)\n",
+    "    text = re.sub(r\"Find\", \"find\", text) \n",
+    "    text = re.sub(r\"banglore\", \"Banglore\", text)\n",
+    "    text = re.sub(r\" J K \", \" JK \", text)\n",
+    "    text = ''.join([c for c in text if c not in punctuation])\n",
+    "    return(text)\n",
+    "\n",
+    "def process_data(data):\n",
+    "    data.replace(abbr_dict,regex=True,inplace=True)\n",
+    "    return data\n",
+    "\n",
+    "def basic_cleaning2(string):\n",
+    "    string = str(string)\n",
+    "    string = string.lower()\n",
+    "    string = re.sub('[0-9\\(\\)\\!\\^\\%\\$\\'\\\"\\.;,-\\?\\{\\}\\[\\]\\\\/]', ' ', string)\n",
+    "    #string = ' '.join([i for i in string.split() if i not in [\"a\", \"and\", \"of\", \"the\", \"to\", \"on\", \"in\", \"at\", \"is\"]])\n",
+    "    string = re.sub(' +', ' ', string)\n",
+    "    return string\n",
+    "\n",
+    "def clean_part1(df2):\n",
+    "    df = df2.copy()\n",
+    "    text_feats = df.select_dtypes(include=['object']).columns.values\n",
+    "    for i in text_feats:\n",
+    "        df[i] = df[i].apply(lambda x: text_to_wordlist(x))\n",
+    "    return df\n",
+    "\n",
+    "def clean_part2(df2):\n",
+    "    df = df2.copy()\n",
+    "    text_feats = df.select_dtypes(include=['object']).columns.values\n",
+    "    for i in text_feats:\n",
+    "        df[i] = df[i].apply(lambda x: basic_cleaning2(x).split())\n",
+    "        df[i] = df[i].apply(lambda x: (' '.join(i for i in x)))\n",
+    "    return df"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "\n",
+    "punctuation='[\"\\'?,\\.]' # I will replace all these punctuation with ''\n",
+    "abbr_dict={\n",
+    "    \"what's\":\"what is\",\n",
+    "    \"what're\":\"what are\",\n",
+    "    \"who's\":\"who is\",\n",
+    "    \"who're\":\"who are\",\n",
+    "    \"where's\":\"where is\",\n",
+    "    \"where're\":\"where are\",\n",
+    "    \"when's\":\"when is\",\n",
+    "    \"when're\":\"when are\",\n",
+    "    \"how's\":\"how is\",\n",
+    "    \"how're\":\"how are\",\n",
+    "\n",
+    "    \"i'm\":\"i am\",\n",
+    "    \"we're\":\"we are\",\n",
+    "    \"you're\":\"you are\",\n",
+    "    \"they're\":\"they are\",\n",
+    "    \"it's\":\"it is\",\n",
+    "    \"he's\":\"he is\",\n",
+    "    \"she's\":\"she is\",\n",
+    "    \"that's\":\"that is\",\n",
+    "    \"there's\":\"there is\",\n",
+    "    \"there're\":\"there are\",\n",
+    "\n",
+    "    \"i've\":\"i have\",\n",
+    "    \"we've\":\"we have\",\n",
+    "    \"you've\":\"you have\",\n",
+    "    \"they've\":\"they have\",\n",
+    "    \"who've\":\"who have\",\n",
+    "    \"would've\":\"would have\",\n",
+    "    \"not've\":\"not have\",\n",
+    "\n",
+    "    \"i'll\":\"i will\",\n",
+    "    \"we'll\":\"we will\",\n",
+    "    \"you'll\":\"you will\",\n",
+    "    \"he'll\":\"he will\",\n",
+    "    \"she'll\":\"she will\",\n",
+    "    \"it'll\":\"it will\",\n",
+    "    \"they'll\":\"they will\",\n",
+    "\n",
+    "    \"isn't\":\"is not\",\n",
+    "    \"wasn't\":\"was not\",\n",
+    "    \"aren't\":\"are not\",\n",
+    "    \"weren't\":\"were not\",\n",
+    "    \"can't\":\"can not\",\n",
+    "    \"couldn't\":\"could not\",\n",
+    "    \"don't\":\"do not\",\n",
+    "    \"didn't\":\"did not\",\n",
+    "    \"shouldn't\":\"should not\",\n",
+    "    \"wouldn't\":\"would not\",\n",
+    "    \"doesn't\":\"does not\",\n",
+    "    \"haven't\":\"have not\",\n",
+    "    \"hasn't\":\"has not\",\n",
+    "    \"hadn't\":\"had not\",\n",
+    "    \"won't\":\"will not\",\n",
+    "    punctuation:'',\n",
+    "    '\\s+':' ', # replace multi space with one single space\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(404290, 7) (2345796, 7)\n"
+     ]
+    }
+   ],
+   "source": [
+    "src = '/media/w/1c392724-ecf3-4615-8f3c-79368ec36380/DS Projects/Kaggle/Quora/data/'\n",
+    "\n",
+    "df_train = pd.read_csv(src + 'train.csv')\n",
+    "df_train['test_id'] = -1\n",
+    "\n",
+    "df_test = pd.read_csv(src + 'test.csv')\n",
+    "df_test['id'] = -1\n",
+    "df_test['qid1'] = -1\n",
+    "df_test['qid2'] = -1\n",
+    "df_test['is_duplicate'] = -1\n",
+    "\n",
+    "df = pd.concat([df_train, df_test])\n",
+    "df['question1'] = df['question1'].fillna('')\n",
+    "df['question2'] = df['question2'].fillna('')\n",
+    "df['uid'] = np.arange(df.shape[0])\n",
+    "df = df.set_index(['uid'])\n",
+    "print(df_train.shape, df_test.shape)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {
+    "scrolled": true
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "(2750086, 7)\n"
+     ]
+    }
+   ],
+   "source": [
+    "print(df.shape)\n",
+    "df.fillna('empty', inplace = True)\n",
+    "df = clean_part1(df)\n",
+    "df = clean_part2(df)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "uid\n",
+       "0    what be the step by step guide to invest in sh...\n",
+       "1     what be the story of kohinoor koh i noor diamond\n",
+       "2    how can i increase the speed of -PRON- interne...\n",
+       "3    why be i mentally very lonely how can i solve ...\n",
+       "4    which one dissolve in water quickly sugar salt...\n",
+       "Name: question1, dtype: object"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "nlp = en_core_web_md.load()\n",
+    "df.head()['question1'].apply(lambda s: ' '.join([c.lemma_ for c in nlp(str(s)) if c.lemma_  != '?']))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "SYMBOLS = set(' '.join(string.punctuation).split(' ') + ['...', '“', '”', '\\'ve'])\n",
+    "\n",
+    "q1 = []\n",
+    "for doc in nlp.pipe(df['question1'], n_threads=8, batch_size=10000):\n",
+    "    word_list = ([c.lemma_ for c in doc if c.lemma_ not in SYMBOLS])\n",
+    "    q1.append(' '.join(i for i in word_list))\n",
+    "\n",
+    "q2 = []\n",
+    "for doc in nlp.pipe(df['question2'], n_threads=8, batch_size=10000):\n",
+    "    word_list = ([c.lemma_ for c in doc if c.lemma_ not in SYMBOLS])\n",
+    "    q2.append(' '.join(i for i in word_list))\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "q1 = pd.DataFrame(q1)\n",
+    "q2 = pd.DataFrame(q2)\n",
+    "\n",
+    "df['question1'] = q1\n",
+    "df['question2'] = q2\n",
+    "\n",
+    "df_train = pd.read_csv(src + 'train.csv')\n",
+    "df_train['test_id'] = -1\n",
+    "df_test = pd.read_csv(src + 'test.csv')\n",
+    "\n",
+    "df_train = df.iloc[:df_train.shape[0], :]\n",
+    "df_test = df.iloc[df_train.shape[0]:, :]\n",
+    "\n",
+    "df_train.to_csv('df_train_spacy_lemmat.csv', index = False)\n",
+    "df_test.to_csv('df_test_spacy_lemmat.csv', index = False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.5.2"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
