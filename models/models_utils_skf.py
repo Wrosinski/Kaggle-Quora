@@ -90,7 +90,7 @@ def xgb_foldrun(X, y, params, name):
 
 
 
-def lgb_foldrun_test(X, y, X_test, params, name):
+def lgb_foldrun_test(X, y, X_test, params, name, save = True):
     skf = StratifiedKFold(n_splits = 10, random_state = 111, shuffle = True)
     if isinstance(X, pd.core.frame.DataFrame):
         X = X.values
@@ -103,7 +103,7 @@ def lgb_foldrun_test(X, y, X_test, params, name):
     i = 0
     losses = []
     oof_train = np.zeros((X.shape[0]))
-    oof_test = np.zeros((10, X_test.shape[0]))
+    oof_test = np.zeros((10, 2345796))
     os.makedirs('saved_models/LGBM/SKF/{}'.format(name), exist_ok = True)
     for tr_index, val_index in skf.split(X, y):
         X_tr, X_val = X[tr_index], X[val_index]
@@ -121,24 +121,24 @@ def lgb_foldrun_test(X, y, X_test, params, name):
         score = log_loss(y_val, val_pred)
         losses.append(score)
         if X_test is not None:
-            test_preds = gbm.predict(X_test)
+            test_preds = gbm.predict(X_test, num_iteration=gbm.best_iteration)
             oof_test[i, :] = test_preds
         print('Final score for fold {} :'.format(i), score, '\n',
               'Time it took to train and predict on fold:', time.time() - t, '\n')
         gbm.save_model('saved_models/LGBM/SKF/{}/LGBM_10SKF_loss{:.5f}_fold{}.txt'.format(name, score, i))
         i += 1
-    np.save('OOF_preds/train/{}'.format(name), oof_train)
     print('Mean logloss for model in 10-folds SKF:', np.array(losses).mean(axis = 0))
     oof_train = pd.DataFrame(oof_train)
     oof_train.columns = ['{}_prob'.format(name)]
-    oof_train.to_pickle('OOF_preds/train/train_preds_{}.pkl'.format(name))
     oof_test = oof_test.mean(axis = 0)
     oof_test = pd.DataFrame(oof_test)
     oof_test.columns = ['{}_prob'.format(name)]
-    oof_test.to_pickle('OOF_preds/test/test_preds_{}.pkl'.format(name))
-    return oof_test
+    if save:
+        oof_train.to_pickle('OOF_preds/train/train_preds_{}.pkl'.format(name))
+        oof_test.to_pickle('OOF_preds/test/test_preds_{}.pkl'.format(name))
+    return oof_train, oof_test
 
-def xgb_foldrun_test(X, y, X_test, params, name):
+def xgb_foldrun_test(X, y, X_test, params, name, save = True):
     skf = StratifiedKFold(n_splits = 10, random_state = 111, shuffle = True)
     if isinstance(X, pd.core.frame.DataFrame):
         X = X.values
@@ -151,7 +151,7 @@ def xgb_foldrun_test(X, y, X_test, params, name):
     i = 0
     losses = []
     oof_train = np.zeros((X.shape[0]))
-    oof_test = np.zeros((10, X_test.shape[0]))
+    oof_test = np.zeros((10, 2345796))
     os.makedirs('saved_models/XGB/SKF/{}'.format(name), exist_ok = True)
     for tr_index, val_index in skf.split(X, y):
         X_tr, X_val = X[tr_index], X[val_index]
@@ -170,19 +170,19 @@ def xgb_foldrun_test(X, y, X_test, params, name):
         score = log_loss(y_val, val_pred)
         losses.append(score)
         if X_test is not None:
-            test_preds = gbm.predict(X_test)
+            test_preds = gbm.predict(X_test, ntree_limit=gbm.best_ntree_limit)
             oof_test[i, :] = test_preds
         print('Final score for fold {} :'.format(i), score, '\n',
               'Time it took to train and predict on fold:', time.time() - t, '\n')
         gbm.save_model('saved_models/XGB/SKF/{}/XGB_10SKF_loss{:.5f}_fold{}.txt'.format(name, score, i))
         i += 1
-    np.save('OOF_preds/train/{}'.format(name), oof_train)
     print('Mean logloss for model in 10-folds SKF:', np.array(losses).mean(axis = 0))
     oof_train = pd.DataFrame(oof_train)
     oof_train.columns = ['{}_prob'.format(name)]
-    oof_train.to_pickle('OOF_preds/train/train_preds_{}.pkl'.format(name))
     oof_test = oof_test.mean(axis = 0)
     oof_test = pd.DataFrame(oof_test)
     oof_test.columns = ['{}_prob'.format(name)]
-    oof_test.to_pickle('OOF_preds/test/test_preds_{}.pkl'.format(name))
-    return oof_test
+    if save:
+        oof_train.to_pickle('OOF_preds/train/train_preds_{}.pkl'.format(name))
+        oof_test.to_pickle('OOF_preds/test/test_preds_{}.pkl'.format(name))
+    return oof_train, oof_test

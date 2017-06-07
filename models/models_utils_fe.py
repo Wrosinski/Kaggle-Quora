@@ -81,7 +81,7 @@ def feature_comb_grouping(df, features_list, transformation):
     return X
 
 def drop_duplicate_cols(df):
-    dfc = df.iloc[0:10000,:]
+    dfc = df.iloc[:5000,:]
     dfc = dfc.T.drop_duplicates().T
     duplicate_cols = sorted(list(set(df.columns).difference(set(dfc.columns))))
     print('Dropping duplicate columns:', duplicate_cols)
