@@ -35,6 +35,7 @@ __& some more.__
 * LSTM Experiments
 * MLP models
 * Stacking
+  * Sklearn Models Ensemble
   * Stacking with LGBM
   * Finding weights for ensemble using Scipy minimize function in-fold
  
