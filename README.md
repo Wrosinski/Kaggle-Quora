@@ -1,8 +1,12 @@
 ## Kaggle Quora Questions Pairs Competition
 
+
+__14th place solution. My part.__
 Code is uncleaned, latest versions are uploaded.
 Not every feature, that can be created with features notebooks was contained in final model - idea of this repository is to give more of an overview of methods used and those that could be used for similar problems.
+
 Big thanks to the authors of all kernels & posts, which were of great inspiration and some features were derived based on them.
+
 
 ### Features
 
@@ -22,6 +26,7 @@ Big thanks to the authors of all kernels & posts, which were of great inspiratio
 * Magic Features:
   * Jared Turkewitz's frequency features
   * NetworkX features
+  
 __& some more.__
 
 
